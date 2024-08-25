@@ -1,69 +1,63 @@
 "use strict";
 
-import Notiflix from 'notiflix';
 import axios from "axios";
 
-axios.defaults.headers.common['x-api-key'] = "live_yGwBKUMrcXhogmV162Ec2tfB8vKSitLyBxRV1Q3LGSpM5n65DYe5QjVqNWDhDizS";
-const breedSelect = document.querySelector('.breed-select');
-const loadingMessage = document.querySelector('.loader');
+axios.defaults.headers.common["x-api-key"] = "live_yGwBKUMrcXhogmV162Ec2tfB8vKSitLyBxRV1Q3LGSpM5n65DYe5QjVqNWDhDizS";
+const ENDPOINT = 'https://api.thecatapi.com/v1/breeds'; // URL-ul de bază al API-ului de știri.
+const API_KEY = axios.defaults.headers.common["x-api-key"]; // Cheia API pentru autentificare.
+const breedSelect = document.querySelector("select.breed-select");
+const loaderMessage = document.querySelector('.loader');
 const errorMessage = document.querySelector('.error');
-const catDiv = document.querySelector('.cat-info');
+
+loaderMessage.style.visibility = 'visible';
+errorMessage.style.visibility = 'hidden';
 
 
-errorMessage.textContent = 'Loading data, please wait...';
-
-async function fetchBreeds() {
-  try {
-    const response = await axios.get('https://api.thecatapi.com/v1/breeds');
-    const breeds = response.data;
-    breeds.forEach(breed => {
-      const option = document.createElement('option');
-      option.value = breed.id;  
-      option.textContent = breed.name;
-      breedSelect.appendChild(option);  
+ export function fetchBreeds(event) {
+  const headers = new Headers({
+    'X-Api-Key': API_KEY,
   });
 
-  loadingMessage.style.visibility = 'hidden';
-  breedSelect.style.visibility = 'visible';
-
-}catch (error) {
-  Notiflix.Notify.failure('Failed to fetch breeds. Please try again later.');
-  errorMessage.style.visibility = 'visible';
-  loadingMessage.style.visibility = 'hidden';
-}
-}
-
-async function fetchCatByBreed(breedId) {
-  try {
-    loadingMessage.style.visibility = 'visible';
+  return axios
+  .get(ENDPOINT)
+  .then(response => {
+    breedSelect.innerHTML = response.data.map(values => `<option value= ${values.id}>${values.name}</option>`);
+    loaderMessage.style.visibility = 'visible';
     errorMessage.style.visibility = 'hidden';
+      })
+  .catch(error => {
+    console.error('Error fetching news:', error); // Afișează eroarea în consolă în caz de eșec.
+    errorMessage.style.visibility = 'visible';
+    throw error; // Aruncă eroarea mai departe pentru a fi gestionată ulterior.
+  })
+};
 
-    const response = await axios.get(`https://api.thecatapi.com/v1/images/search?breed_ids=${breedId}`);
-    console.log(response.data)
-    const catData = response.data[0]; 
+fetchBreeds()
+breedSelect.addEventListener("change", fetchNews);
 
-    catDiv.innerHTML = `
+function fetchNews(event) {
+  const headers = new Headers({
+    'X-Api-Key': API_KEY,
+  });
+
+  const currentValue = event.target.value;
+  return axios
+  .get(`https://api.thecatapi.com/v1/images/search?breed_ids=${currentValue}`)
+  .then(res => {
+    const catData = res.data[0]; 
+    document.querySelector('.cat-info').innerHTML = `
       <img src="${catData.url}" alt="${catData.breeds[0].name} width="500" height="300"">
       <h2>${catData.breeds[0].name}</h2>
       <p>${catData.breeds[0].description}</p>
       <p>Temperament: ${catData.breeds[0].temperament}</p>
     `;
-
-    loadingMessage.style.visibility = 'hidden'
-
-  } catch (error) {
-    Notiflix.Notify.failure('Failed to fetch cat information. Please try again.');
+    loaderMessage.style.visibility = 'hidden';
+   })
+  .catch(error => {
+    console.error('Error fetching data:', error); // Afișează eroarea în consolă în caz de eșec.
     errorMessage.style.visibility = 'visible';
-    
-  } finally {
-    loadingMessage.style.visibility = 'hidden'
-  }
-};
+    throw error; // Aruncă eroarea mai departe pentru a fi gestionată ulterior.
+  })
+}
 
 
-breedSelect.addEventListener('change', (event) => {
-  const selectedBreedId = event.target.value;
-  fetchCatByBreed(selectedBreedId);
-});
-
-fetchBreeds();
